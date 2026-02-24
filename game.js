@@ -99,17 +99,23 @@ canvas.height = CONFIG.canvas.height;
 // the browser CSS-scales the canvas down to fit the viewport.
 ctx.imageSmoothingEnabled = false;
 
-loadImages(CONFIG.assets).then((images) => {
-  drawScene(images);
+// Step 1 — load only the background; other assets added in later steps.
+loadImages({ background1: CONFIG.assets.background1 }).then((images) => {
+  const bg = images.background1;
+
+  // Size the canvas to the image's native dimensions — no scaling.
+  canvas.width  = bg.naturalWidth;
+  canvas.height = bg.naturalHeight;
+  ctx.imageSmoothingEnabled = false;       // re-apply after resize
+
+  drawScene(bg);
 });
 
 // ── Render one frame ────────────────────────────────────────────────
 
-function drawScene(images) {
-  const { width, height } = CONFIG.canvas;
-
-  // Background — drawn at native size (no scaling).
-  ctx.drawImage(images.background1, 0, 0, width, height);
+function drawScene(bg) {
+  // Draw at (0,0) with no width/height args → native resolution, no scaling.
+  ctx.drawImage(bg, 0, 0);
 
   // Scene objects (cat, hats, fish, etc.) will be added in later steps.
 }
