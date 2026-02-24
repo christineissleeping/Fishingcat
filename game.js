@@ -57,10 +57,10 @@ const CONFIG = {
   // 50% of wallHat display width → 110; 1:1 aspect → 110×110
   // dx/dy are offsets from the standing cat's top-left corner
   catHat: {
-    dx: 175,
-    dy: -25,
-    w: 110,
-    h: 110,
+    dx: 130,
+    dy: -70,
+    w: 240,
+    h: 240,
   },
 
   // ── Timing (seconds) ──────────────────────────────────────────────
