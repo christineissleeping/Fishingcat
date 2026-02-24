@@ -29,16 +29,16 @@ const CONFIG = {
 
   // Step 2 — cat reading on the bed (Cat-open-eye, native 2048×2048 → 1:1)
   bedCat: {
-    x: 120,
-    y: 640,
+    x: 80,
+    y: 900,
     w: 400,
     h: 400,
   },
 
   // Step 2 — straw hat on the wall hanger (Hat-1, native 2048×1536 → 4:3)
   wallHat: {
-    x: 1140,
-    y: 380,
+    x: 1380,
+    y: 620,
     w: 220,
     h: 165,
   },
