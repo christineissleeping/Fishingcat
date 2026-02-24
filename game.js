@@ -108,21 +108,8 @@ loadImages(CONFIG.assets).then((images) => {
 function drawScene(images) {
   const { width, height } = CONFIG.canvas;
 
-  // 1. Background — drawn at native size (no scaling).
+  // Background — drawn at native size (no scaling).
   ctx.drawImage(images.background1, 0, 0, width, height);
 
-  // 2. Hats (behind the cat so the cat can overlap them later).
-  const h1 = CONFIG.hat1;
-  ctx.drawImage(images.hat1, h1.x, h1.y, h1.w, h1.h);
-
-  const h2 = CONFIG.hat2;
-  ctx.drawImage(images.hat2, h2.x, h2.y, h2.w, h2.h);
-
-  // 3. Cat — standing pose, no hat.
-  const c = CONFIG.cat;
-  ctx.drawImage(images.catStand, c.x, c.y, c.w, c.h);
-
-  // 4. Fish
-  const f = CONFIG.fish;
-  ctx.drawImage(images.fish, f.x, f.y, f.w, f.h);
+  // Scene objects (cat, hats, fish, etc.) will be added in later steps.
 }
