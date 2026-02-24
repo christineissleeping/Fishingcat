@@ -31,14 +31,14 @@ const CONFIG = {
   bedCat: {
     x: 80,
     y: 1150,
-    w: 400,
-    h: 400,
+    w: 450,
+    h: 450,
   },
 
   // Step 2 — straw hat on the wall hanger (Hat-1, native 2048×1536 → 4:3)
   wallHat: {
-    x: 1220,
-    y: 500,
+    x: 1260,
+    y: 540,
     w: 220,
     h: 165,
   },
