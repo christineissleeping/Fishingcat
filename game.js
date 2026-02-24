@@ -76,6 +76,36 @@ function loadImages(assetMap) {
   ).then(() => images);
 }
 
+// ── Blink state ─────────────────────────────────────────────────────
+
+let blinkTimerId = null;
+let eyesOpen = true;
+
+function startBlink(images) {
+  stopBlink();
+  const { blinkInterval, blinkDuration } = CONFIG.timing;
+
+  blinkTimerId = setInterval(() => {
+    // Close eyes
+    eyesOpen = false;
+    drawScene(images);
+
+    // Re-open after blinkDuration
+    setTimeout(() => {
+      eyesOpen = true;
+      drawScene(images);
+    }, blinkDuration * 1000);
+  }, blinkInterval * 1000);
+}
+
+function stopBlink() {
+  if (blinkTimerId !== null) {
+    clearInterval(blinkTimerId);
+    blinkTimerId = null;
+  }
+  eyesOpen = true;
+}
+
 // ── Bootstrap ───────────────────────────────────────────────────────
 
 const canvas = document.getElementById("gameCanvas");
@@ -88,11 +118,12 @@ canvas.height = CONFIG.canvas.height;
 // the browser CSS-scales the canvas down to fit the viewport.
 ctx.imageSmoothingEnabled = false;
 
-// Step 2 — load background + bed cat + wall hat.
+// Step 3 — load background + bed cat (both eye states) + wall hat.
 loadImages({
-  background1: CONFIG.assets.background1,
-  catOpenEye:  CONFIG.assets.catOpenEye,
-  hat1:        CONFIG.assets.hat1,
+  background1:  CONFIG.assets.background1,
+  catOpenEye:   CONFIG.assets.catOpenEye,
+  catCloseEye:  CONFIG.assets.catCloseEye,
+  hat1:         CONFIG.assets.hat1,
 }).then((images) => {
   const bg = images.background1;
 
@@ -102,6 +133,7 @@ loadImages({
   ctx.imageSmoothingEnabled = false;       // re-apply after resize
 
   drawScene(images);
+  startBlink(images);
 });
 
 // ── Render one frame ────────────────────────────────────────────────
@@ -114,7 +146,8 @@ function drawScene(images) {
   const wh = CONFIG.wallHat;
   ctx.drawImage(images.hat1, wh.x, wh.y, wh.w, wh.h);
 
-  // 3. Bed cat — on top of the bedspread.
+  // 3. Bed cat — swap sprite based on blink state.
   const bc = CONFIG.bedCat;
-  ctx.drawImage(images.catOpenEye, bc.x, bc.y, bc.w, bc.h);
+  const catImg = eyesOpen ? images.catOpenEye : images.catCloseEye;
+  ctx.drawImage(catImg, bc.x, bc.y, bc.w, bc.h);
 }
