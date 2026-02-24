@@ -52,21 +52,30 @@ function debugLogBackground(bgSprite) {
     'bg scale':          bgSprite.scale.x,
     'stage width':       CONFIG.stageWidth,
     'stage height':      CONFIG.stageHeight,
+    'devicePixelRatio':  window.devicePixelRatio || 1,
   });
 }
 
 // ── Bootstrap ────────────────────────────────────────────────────────
 async function init() {
+  const dpr = window.devicePixelRatio || 1;
+
   const app = new PIXI.Application({
     width:  CONFIG.stageWidth,
     height: CONFIG.stageHeight,
     backgroundColor: 0x1a1a2e,
+    resolution: dpr,    // render at native device pixels
+    autoDensity: true,  // CSS size stays stageWidth × stageHeight
   });
   document.body.appendChild(app.view);
 
   // ── Load & place Background-1 ──────────────────────────────────────
   const bgTex    = await PIXI.Assets.load('assets/Background-1.png');
   const bgSprite = new PIXI.Sprite(bgTex);
+
+  // High-quality downscale filtering (avoids blurry bilinear default)
+  bgTex.baseTexture.scaleMode = PIXI.SCALE_MODES.LINEAR;
+  bgTex.baseTexture.mipmap    = PIXI.MIPMAP_MODES.ON;
 
   // Scale so the background fills bgScale of the stage (fit by width)
   const targetW     = CONFIG.stageWidth * CONFIG.bgScale;
