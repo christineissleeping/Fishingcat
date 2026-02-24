@@ -10,16 +10,21 @@ const CONFIG = {
 
   // Background-1 is the reference coordinate system.
   // bgScale: fraction of the stage the background should fill.
-  // 0.5 → background rendered at 50 % of stage size, centred.
   bgScale: 0.5,
 
-  // Anchors — native Background-1 coords (px). Placeholders for later steps.
-  bedCatAnchor:   { x: 1800, y: 1200 },
-  hatAnchor:      { x: 1400, y:  800 },
-  standCatAnchor: { x:  600, y: 1400 },
+  // Anchors — native Background-1 coords (px).
+  bedCatAnchor:   { x: 300,  y: 1150 },  // center-bottom of cat on bed
+  hatAnchor:      { x: 1380, y: 480  },  // top-center of hat on wall hook
+  standCatAnchor: { x: 1200, y: 1350 },  // center-bottom of standing cat near table
+
+  // Object sizes as fraction of rendered background width.
+  // e.g. 0.2 → sprite will be 20% as wide as the background on screen.
+  bedCatScale:   0.22,
+  hatScale:      0.10,
+  standCatScale: 0.18,
 
   // Door trigger zone — native Background-1 coords & size (px).
-  doorZone: { x: 200, y: 400, width: 400, height: 700 },
+  doorZone: { x: 2300, y: 200, width: 350, height: 1100 },
 
   // Timing
   blinkInterval: 3000,
@@ -39,20 +44,74 @@ function bgToScreen(bgSprite, nativeX, nativeY) {
   };
 }
 
-// ── Debug: log background placement info ─────────────────────────────
+// ── Helper: place a sprite relative to Background-1 ─────────────────
+// anchorX/Y  = position in native BG pixels
+// sizeScale  = fraction of rendered bg width the sprite should occupy
+// pivotMode  = how the sprite is anchored to its position
+function placeOnBg(sprite, bgSprite, anchorX, anchorY, sizeScale, pivotMode) {
+  // Scale sprite so its width = sizeScale * background's rendered width
+  const desiredW   = sizeScale * bgSprite.width;
+  const spriteScale = desiredW / sprite.texture.width;
+  sprite.scale.set(spriteScale);
+
+  // Pivot: 'bottom-center' for characters, 'top-center' for hanging items
+  if (pivotMode === 'top-center') {
+    sprite.anchor.set(0.5, 0.0);
+  } else {
+    sprite.anchor.set(0.5, 1.0); // bottom-center (default)
+  }
+
+  // Position in screen coords
+  const pos = bgToScreen(bgSprite, anchorX, anchorY);
+  sprite.x = pos.x;
+  sprite.y = pos.y;
+}
+
+// ── Debug helpers ────────────────────────────────────────────────────
 function debugLogBackground(bgSprite) {
   if (!CONFIG.debugMode) return;
-  const w = bgSprite.width;
-  const h = bgSprite.height;
   console.table({
     'bg x':              bgSprite.x,
     'bg y':              bgSprite.y,
-    'bg width (scaled)': Math.round(w),
-    'bg height (scaled)': Math.round(h),
+    'bg width (scaled)': Math.round(bgSprite.width),
+    'bg height (scaled)': Math.round(bgSprite.height),
     'bg scale':          bgSprite.scale.x,
     'stage width':       CONFIG.stageWidth,
     'stage height':      CONFIG.stageHeight,
     'devicePixelRatio':  window.devicePixelRatio || 1,
+  });
+}
+
+function debugDrawMarkers(gfx, bgSprite) {
+  if (!CONFIG.debugMode) return;
+
+  const markers = [
+    { label: 'bedCat',   ...CONFIG.bedCatAnchor,   color: 0xff0000 },
+    { label: 'hat',      ...CONFIG.hatAnchor,       color: 0x00ff00 },
+    { label: 'standCat', ...CONFIG.standCatAnchor,  color: 0x00ccff },
+  ];
+
+  markers.forEach(({ label, x, y, color }) => {
+    const p = bgToScreen(bgSprite, x, y);
+    // Cross-hair
+    gfx.lineStyle(2, color);
+    gfx.moveTo(p.x - 10, p.y);
+    gfx.lineTo(p.x + 10, p.y);
+    gfx.moveTo(p.x, p.y - 10);
+    gfx.lineTo(p.x, p.y + 10);
+    // Small circle
+    gfx.drawCircle(p.x, p.y, 6);
+  });
+
+  // Label each marker
+  markers.forEach(({ label, x, y, color }) => {
+    const p = bgToScreen(bgSprite, x, y);
+    const txt = new PIXI.Text(label, {
+      fontSize: 11, fill: color, fontFamily: 'monospace',
+    });
+    txt.x = p.x + 10;
+    txt.y = p.y - 8;
+    gfx.parent.addChild(txt);
   });
 }
 
@@ -64,32 +123,64 @@ async function init() {
     width:  CONFIG.stageWidth,
     height: CONFIG.stageHeight,
     backgroundColor: 0x1a1a2e,
-    resolution: dpr,    // render at native device pixels
-    autoDensity: true,  // CSS size stays stageWidth × stageHeight
+    resolution: dpr,
+    autoDensity: true,
   });
   document.body.appendChild(app.view);
 
-  // ── Load & place Background-1 ──────────────────────────────────────
-  const bgTex    = await PIXI.Assets.load('assets/Background-1.png');
+  // ── Load all textures up front ─────────────────────────────────────
+  const [bgTex, catOpenTex, hatTex, catStandTex] = await Promise.all([
+    PIXI.Assets.load('assets/Background-1.png'),
+    PIXI.Assets.load('assets/Cat-open-eye.png'),
+    PIXI.Assets.load('assets/Hat-1.png'),
+    PIXI.Assets.load('assets/Cat-stand.png'),
+  ]);
+
+  // High-quality downscale filtering
+  [bgTex, catOpenTex, hatTex, catStandTex].forEach((tex) => {
+    tex.baseTexture.scaleMode = PIXI.SCALE_MODES.LINEAR;
+    tex.baseTexture.mipmap    = PIXI.MIPMAP_MODES.ON;
+  });
+
+  // ── Background ────────────────────────────────────────────────────
   const bgSprite = new PIXI.Sprite(bgTex);
-
-  // High-quality downscale filtering (avoids blurry bilinear default)
-  bgTex.baseTexture.scaleMode = PIXI.SCALE_MODES.LINEAR;
-  bgTex.baseTexture.mipmap    = PIXI.MIPMAP_MODES.ON;
-
-  // Scale so the background fills bgScale of the stage (fit by width)
   const targetW     = CONFIG.stageWidth * CONFIG.bgScale;
   const renderScale = targetW / bgTex.width;
   bgSprite.scale.set(renderScale);
-
-  // Centre on stage
   bgSprite.x = (CONFIG.stageWidth  - bgTex.width  * renderScale) / 2;
   bgSprite.y = (CONFIG.stageHeight - bgTex.height * renderScale) / 2;
-
   app.stage.addChild(bgSprite);
 
-  // ── Debug output ───────────────────────────────────────────────────
+  // ── Hat on wall hook ──────────────────────────────────────────────
+  const hatSprite = new PIXI.Sprite(hatTex);
+  placeOnBg(hatSprite, bgSprite,
+    CONFIG.hatAnchor.x, CONFIG.hatAnchor.y,
+    CONFIG.hatScale, 'top-center');
+  app.stage.addChild(hatSprite);
+
+  // ── Bed cat (open eye, reading) ───────────────────────────────────
+  const bedCatSprite = new PIXI.Sprite(catOpenTex);
+  placeOnBg(bedCatSprite, bgSprite,
+    CONFIG.bedCatAnchor.x, CONFIG.bedCatAnchor.y,
+    CONFIG.bedCatScale, 'bottom-center');
+  app.stage.addChild(bedCatSprite);
+
+  // ── Standing cat (hidden for now) ─────────────────────────────────
+  const standCatSprite = new PIXI.Sprite(catStandTex);
+  placeOnBg(standCatSprite, bgSprite,
+    CONFIG.standCatAnchor.x, CONFIG.standCatAnchor.y,
+    CONFIG.standCatScale, 'bottom-center');
+  standCatSprite.visible = false;
+  app.stage.addChild(standCatSprite);
+
+  // ── Debug ─────────────────────────────────────────────────────────
   debugLogBackground(bgSprite);
+
+  if (CONFIG.debugMode) {
+    const gfx = new PIXI.Graphics();
+    app.stage.addChild(gfx);
+    debugDrawMarkers(gfx, bgSprite);
+  }
 }
 
 init();
