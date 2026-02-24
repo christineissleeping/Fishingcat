@@ -38,7 +38,7 @@ const CONFIG = {
   // Step 2 — straw hat on the wall hanger (Hat-1, native 2048×1536 → 4:3)
   wallHat: {
     x: 1300,
-    y: 540,
+    y: 580,
     w: 220,
     h: 165,
   },
