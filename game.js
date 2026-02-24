@@ -41,6 +41,16 @@ const CONFIG = {
     y: 580,
     w: 220,
     h: 165,
+    pulseSpeed:  2.0,    // cycles per second (reused from thought pulse)
+    pulseAmount: 0.08,   // ±8 % scale
+  },
+
+  // Step 5 — standing cat on the floor near the table (native 2048×2048 → 1:1)
+  standCat: {
+    x: 800,
+    y: 1300,
+    w: 500,
+    h: 500,
   },
 
   // ── Timing (seconds) ──────────────────────────────────────────────
@@ -95,7 +105,7 @@ function loadImages(assetMap) {
 
 // ── Scene state ─────────────────────────────────────────────────────
 
-let scene = "idle";        // "idle" | "thinking" | "dreaming"
+let scene = "idle";        // "idle" | "thinking" | "dreaming" | "standing"
 let visibleBubbles = 0;    // 0–3 small thought dots shown so far
 let pulseT0 = 0;           // timestamp when fish pulse started
 let animFrameId = null;    // rAF handle for the pulse loop
@@ -214,7 +224,14 @@ function onCatClick() {
   }, bubbleDelay * (bubbles.length + 1));
 }
 
-// ── Fish pulse loop ─────────────────────────────────────────────────
+function onFishClick() {
+  stopPulse();
+  scene = "standing";
+  pulseT0 = performance.now();
+  startPulse();            // reuse rAF loop — now drives the hat pulse
+}
+
+// ── Pulse animation loop ────────────────────────────────────────────
 
 function startPulse() {
   stopPulse();
@@ -243,11 +260,12 @@ canvas.height = CONFIG.canvas.height;
 // the browser CSS-scales the canvas down to fit the viewport.
 ctx.imageSmoothingEnabled = false;
 
-// Step 4 — load all sprites needed so far.
+// Step 5 — load all sprites needed so far.
 loadImages({
   background1:  CONFIG.assets.background1,
   catOpenEye:   CONFIG.assets.catOpenEye,
   catCloseEye:  CONFIG.assets.catCloseEye,
+  catStand:     CONFIG.assets.catStand,
   hat1:         CONFIG.assets.hat1,
   fish:         CONFIG.assets.fish,
 }).then((images) => {
@@ -262,13 +280,23 @@ loadImages({
   drawScene(images);
   startBlink(images);
 
-  // Click: bed cat → thought bubbles → fish
   canvas.addEventListener("click", (e) => {
     const rect = canvas.getBoundingClientRect();
     const pt = hitTest(e, rect);
 
+    // Step 4: click bed cat → thought bubbles
     if (scene === "idle" && inRect(pt.x, pt.y, CONFIG.bedCat)) {
       onCatClick();
+      return;
+    }
+
+    // Step 5: click fish → standing cat + hat pulse
+    if (scene === "dreaming") {
+      const f = CONFIG.thought.fish;
+      const fishRect = { x: f.cx - f.w / 2, y: f.cy - f.h / 2, w: f.w, h: f.h };
+      if (inRect(pt.x, pt.y, fishRect)) {
+        onFishClick();
+      }
     }
   });
 });
@@ -279,16 +307,36 @@ function drawScene(images) {
   // 1. Background — native resolution, no scaling.
   ctx.drawImage(images.background1, 0, 0);
 
-  // 2. Wall hat — behind the cat layer.
+  // 2. Wall hat
   const wh = CONFIG.wallHat;
-  ctx.drawImage(images.hat1, wh.x, wh.y, wh.w, wh.h);
+  if (scene === "standing") {
+    // Pulsing hat
+    const elapsed = (performance.now() - pulseT0) / 1000;
+    const scale = 1 + wh.pulseAmount *
+      Math.sin(elapsed * wh.pulseSpeed * Math.PI * 2);
+    const hw = wh.w * scale;
+    const hh = wh.h * scale;
+    const hcx = wh.x + wh.w / 2;
+    const hcy = wh.y + wh.h / 2;
+    ctx.drawImage(images.hat1, hcx - hw / 2, hcy - hh / 2, hw, hh);
+  } else {
+    ctx.drawImage(images.hat1, wh.x, wh.y, wh.w, wh.h);
+  }
 
-  // 3. Bed cat — swap sprite based on blink state.
-  const bc = CONFIG.bedCat;
-  const catImg = eyesOpen ? images.catOpenEye : images.catCloseEye;
-  ctx.drawImage(catImg, bc.x, bc.y, bc.w, bc.h);
+  // 3. Bed cat (idle / thinking / dreaming only)
+  if (scene !== "standing") {
+    const bc = CONFIG.bedCat;
+    const catImg = eyesOpen ? images.catOpenEye : images.catCloseEye;
+    ctx.drawImage(catImg, bc.x, bc.y, bc.w, bc.h);
+  }
 
-  // 4. Thought bubbles (thinking + dreaming states).
+  // 4. Standing cat (standing state only)
+  if (scene === "standing") {
+    const sc = CONFIG.standCat;
+    ctx.drawImage(images.catStand, sc.x, sc.y, sc.w, sc.h);
+  }
+
+  // 5. Thought bubbles (thinking + dreaming states).
   if (scene === "thinking" || scene === "dreaming") {
     const t = CONFIG.thought;
 
