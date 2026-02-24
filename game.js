@@ -53,6 +53,16 @@ const CONFIG = {
     h: 500,
   },
 
+  // Step 6 — Hat-2 overlay on standing cat's head (native 2048×2048 → 1:1)
+  // 50% of wallHat display width → 110; 1:1 aspect → 110×110
+  // dx/dy are offsets from the standing cat's top-left corner
+  catHat: {
+    dx: 175,
+    dy: -25,
+    w: 110,
+    h: 110,
+  },
+
   // ── Timing (seconds) ──────────────────────────────────────────────
   timing: {
     blinkInterval:    3.0,
@@ -105,11 +115,17 @@ function loadImages(assetMap) {
 
 // ── Scene state ─────────────────────────────────────────────────────
 
-let scene = "idle";        // "idle" | "thinking" | "dreaming" | "standing"
+let scene = "idle";        // "idle" | "thinking" | "dreaming" | "standing" | "hatted"
 let visibleBubbles = 0;    // 0–3 small thought dots shown so far
-let pulseT0 = 0;           // timestamp when fish pulse started
+let pulseT0 = 0;           // timestamp when pulse started
 let animFrameId = null;    // rAF handle for the pulse loop
 let cachedImages = null;   // set once at boot, used by callbacks
+
+// ── Drag state (Step 6) ────────────────────────────────────────────
+
+let catPos = null;         // { x, y } — mutable position of standing cat
+let dragging = false;
+let dragOffset = { x: 0, y: 0 };
 
 // ── Blink state ─────────────────────────────────────────────────────
 
@@ -231,6 +247,13 @@ function onFishClick() {
   startPulse();            // reuse rAF loop — now drives the hat pulse
 }
 
+function onHatClick() {
+  stopPulse();
+  scene = "hatted";
+  catPos = { x: CONFIG.standCat.x, y: CONFIG.standCat.y };
+  drawScene(cachedImages);
+}
+
 // ── Pulse animation loop ────────────────────────────────────────────
 
 function startPulse() {
@@ -260,13 +283,14 @@ canvas.height = CONFIG.canvas.height;
 // the browser CSS-scales the canvas down to fit the viewport.
 ctx.imageSmoothingEnabled = false;
 
-// Step 5 — load all sprites needed so far.
+// Step 6 — load all sprites needed so far.
 loadImages({
   background1:  CONFIG.assets.background1,
   catOpenEye:   CONFIG.assets.catOpenEye,
   catCloseEye:  CONFIG.assets.catCloseEye,
   catStand:     CONFIG.assets.catStand,
   hat1:         CONFIG.assets.hat1,
+  hat2:         CONFIG.assets.hat2,
   fish:         CONFIG.assets.fish,
 }).then((images) => {
   cachedImages = images;
@@ -280,7 +304,10 @@ loadImages({
   drawScene(images);
   startBlink(images);
 
+  // ── Click events ──────────────────────────────────────────────────
+
   canvas.addEventListener("click", (e) => {
+    if (dragging) return;
     const rect = canvas.getBoundingClientRect();
     const pt = hitTest(e, rect);
 
@@ -296,8 +323,43 @@ loadImages({
       const fishRect = { x: f.cx - f.w / 2, y: f.cy - f.h / 2, w: f.w, h: f.h };
       if (inRect(pt.x, pt.y, fishRect)) {
         onFishClick();
+        return;
       }
     }
+
+    // Step 6: click pulsing wall hat → hat on cat
+    if (scene === "standing" && inRect(pt.x, pt.y, CONFIG.wallHat)) {
+      onHatClick();
+    }
+  });
+
+  // ── Drag events (Step 6) ──────────────────────────────────────────
+
+  canvas.addEventListener("mousedown", (e) => {
+    if (scene !== "hatted" || !catPos) return;
+    const rect = canvas.getBoundingClientRect();
+    const pt = hitTest(e, rect);
+    const sc = CONFIG.standCat;
+    const catRect = { x: catPos.x, y: catPos.y, w: sc.w, h: sc.h };
+
+    if (inRect(pt.x, pt.y, catRect)) {
+      dragging = true;
+      dragOffset.x = pt.x - catPos.x;
+      dragOffset.y = pt.y - catPos.y;
+    }
+  });
+
+  canvas.addEventListener("mousemove", (e) => {
+    if (!dragging) return;
+    const rect = canvas.getBoundingClientRect();
+    const pt = hitTest(e, rect);
+    catPos.x = pt.x - dragOffset.x;
+    catPos.y = pt.y - dragOffset.y;
+    drawScene(cachedImages);
+  });
+
+  canvas.addEventListener("mouseup", () => {
+    dragging = false;
   });
 });
 
@@ -307,7 +369,7 @@ function drawScene(images) {
   // 1. Background — native resolution, no scaling.
   ctx.drawImage(images.background1, 0, 0);
 
-  // 2. Wall hat
+  // 2. Wall hat (hidden in "hatted" — it's now on the cat)
   const wh = CONFIG.wallHat;
   if (scene === "standing") {
     // Pulsing hat
@@ -319,21 +381,30 @@ function drawScene(images) {
     const hcx = wh.x + wh.w / 2;
     const hcy = wh.y + wh.h / 2;
     ctx.drawImage(images.hat1, hcx - hw / 2, hcy - hh / 2, hw, hh);
-  } else {
+  } else if (scene !== "hatted") {
     ctx.drawImage(images.hat1, wh.x, wh.y, wh.w, wh.h);
   }
 
   // 3. Bed cat (idle / thinking / dreaming only)
-  if (scene !== "standing") {
+  if (scene !== "standing" && scene !== "hatted") {
     const bc = CONFIG.bedCat;
     const catImg = eyesOpen ? images.catOpenEye : images.catCloseEye;
     ctx.drawImage(catImg, bc.x, bc.y, bc.w, bc.h);
   }
 
-  // 4. Standing cat (standing state only)
+  // 4. Standing cat + optional hat overlay
   if (scene === "standing") {
     const sc = CONFIG.standCat;
     ctx.drawImage(images.catStand, sc.x, sc.y, sc.w, sc.h);
+  }
+  if (scene === "hatted" && catPos) {
+    const sc = CONFIG.standCat;
+    ctx.drawImage(images.catStand, catPos.x, catPos.y, sc.w, sc.h);
+
+    // Hat-2 overlay on cat's head
+    const ch = CONFIG.catHat;
+    ctx.drawImage(images.hat2,
+      catPos.x + ch.dx, catPos.y + ch.dy, ch.w, ch.h);
   }
 
   // 5. Thought bubbles (thinking + dreaming states).
