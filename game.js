@@ -26,32 +26,21 @@ const CONFIG = {
   // ── Sprite anchors & draw sizes ────────────────────────────────────
   // x, y  = top-left corner on the canvas
   // w, h  = drawn width / height  (aspect ratio kept manually)
-  cat: {
-    x: 1350,
-    y: 1200,
-    w: 550,
-    h: 550,
+
+  // Step 2 — cat reading on the bed (Cat-open-eye, native 2048×2048 → 1:1)
+  bedCat: {
+    x: 120,
+    y: 640,
+    w: 400,
+    h: 400,
   },
 
-  hat1: {
-    x: 1060,
-    y: 440,
-    w: 240,
-    h: 180,   // native ratio 2048:1536 ≈ 4:3
-  },
-
-  hat2: {
-    x: 680,
-    y: 520,
-    w: 200,
-    h: 200,
-  },
-
-  fish: {
-    x: 400,
-    y: 1500,
-    w: 200,
-    h: 200,
+  // Step 2 — straw hat on the wall hanger (Hat-1, native 2048×1536 → 4:3)
+  wallHat: {
+    x: 1140,
+    y: 380,
+    w: 220,
+    h: 165,
   },
 
   // ── Timing (seconds) — placeholders for future steps ──────────────
@@ -99,23 +88,33 @@ canvas.height = CONFIG.canvas.height;
 // the browser CSS-scales the canvas down to fit the viewport.
 ctx.imageSmoothingEnabled = false;
 
-// Step 1 — load only the background; other assets added in later steps.
-loadImages({ background1: CONFIG.assets.background1 }).then((images) => {
+// Step 2 — load background + bed cat + wall hat.
+loadImages({
+  background1: CONFIG.assets.background1,
+  catOpenEye:  CONFIG.assets.catOpenEye,
+  hat1:        CONFIG.assets.hat1,
+}).then((images) => {
   const bg = images.background1;
 
-  // Size the canvas to the image's native dimensions — no scaling.
+  // Size the canvas to the background's native dimensions — no scaling.
   canvas.width  = bg.naturalWidth;
   canvas.height = bg.naturalHeight;
   ctx.imageSmoothingEnabled = false;       // re-apply after resize
 
-  drawScene(bg);
+  drawScene(images);
 });
 
 // ── Render one frame ────────────────────────────────────────────────
 
-function drawScene(bg) {
-  // Draw at (0,0) with no width/height args → native resolution, no scaling.
-  ctx.drawImage(bg, 0, 0);
+function drawScene(images) {
+  // 1. Background — native resolution, no scaling.
+  ctx.drawImage(images.background1, 0, 0);
 
-  // Scene objects (cat, hats, fish, etc.) will be added in later steps.
+  // 2. Wall hat — behind the cat layer.
+  const wh = CONFIG.wallHat;
+  ctx.drawImage(images.hat1, wh.x, wh.y, wh.w, wh.h);
+
+  // 3. Bed cat — on top of the bedspread.
+  const bc = CONFIG.bedCat;
+  ctx.drawImage(images.catOpenEye, bc.x, bc.y, bc.w, bc.h);
 }
