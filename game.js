@@ -200,22 +200,20 @@ function drawCloud(cx, cy, w, h) {
     { dx:  0,        dy:  h * 0.08, r: h * 0.36 },
   ];
 
-  // 1. Fill white cloud body
+  // 1. Draw slightly enlarged black circles (combined = solid outline ring)
+  oc.fillStyle = "#000";
+  for (const b of bumps) {
+    oc.beginPath();
+    oc.arc(ox + b.dx, oy + b.dy, b.r + 1.5, 0, Math.PI * 2);
+    oc.fill();
+  }
+
+  // 2. Draw white circles on top (covers interior, outer black edge remains)
   oc.fillStyle = "#fff";
   for (const b of bumps) {
     oc.beginPath();
     oc.arc(ox + b.dx, oy + b.dy, b.r, 0, Math.PI * 2);
     oc.fill();
-  }
-
-  // 2. Stroke behind the white fills → only the outer edge is visible
-  oc.globalCompositeOperation = "destination-over";
-  oc.strokeStyle = "#000";
-  oc.lineWidth = 3;
-  for (const b of bumps) {
-    oc.beginPath();
-    oc.arc(ox + b.dx, oy + b.dy, b.r, 0, Math.PI * 2);
-    oc.stroke();
   }
 
   ctx.drawImage(off, cx - offW / 2, cy - offH / 2);
