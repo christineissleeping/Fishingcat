@@ -96,6 +96,16 @@ const CONFIG = {
     pulseSpeed:  2.0,          // cycles per second
     pulseAmount: 0.08,         // ±8 % scale
   },
+
+  // ── Step 8 — Scene 2: outside fishing ───────────────────────────
+  scene2: {
+    // Fishing cat on the bank near the wooden stump (native 2048×2048 → 1:1)
+    fishCat: { x: 1000, y: 1000, w: 500, h: 500 },
+    // Water band where ripples are drawn
+    water: { x: 450, y: 980, w: 2100, h: 300 },
+    rippleCount: 6,
+    rippleSpeed: 0.4,          // cycles per second
+  },
 };
 
 // ── Image loader ────────────────────────────────────────────────────
@@ -123,7 +133,7 @@ function loadImages(assetMap) {
 
 // ── Scene state ─────────────────────────────────────────────────────
 
-let scene = "idle";        // "idle" | "thinking" | "dreaming" | "standing" | "hatted"
+let scene = "idle";        // "idle" | "thinking" | "dreaming" | "standing" | "hatted" | "outside"
 let visibleBubbles = 0;    // 0–3 small thought dots shown so far
 let pulseT0 = 0;           // timestamp when pulse started
 let animFrameId = null;    // rAF handle for the pulse loop
@@ -263,6 +273,41 @@ function onHatClick() {
   drawScene(cachedImages);
 }
 
+function onDoorTriggered() {
+  dragging = false;
+  scene = "outside";
+  startPulse();              // reuse rAF loop for water ripple animation
+}
+
+// ── Water ripples (Step 8) ──────────────────────────────────────────
+
+// Stable per-ripple seeds (computed once, reused every frame)
+const rippleSeeds = Array.from({ length: 12 }, (_, i) => ({
+  px: (i * 0.618033988) % 1,          // golden-ratio distribution across width
+  py: (i * 0.414213562) % 1,          // sqrt(2)-1 distribution across height
+}));
+
+function drawRipples(t) {
+  const s2 = CONFIG.scene2;
+  const w = s2.water;
+  ctx.save();
+  ctx.strokeStyle = "rgba(255,255,255,0.35)";
+  ctx.lineWidth = 1.5;
+
+  for (let i = 0; i < s2.rippleCount; i++) {
+    const seed = rippleSeeds[i];
+    const bx = w.x + seed.px * w.w;
+    const by = w.y + seed.py * w.h;
+    const phase = t * s2.rippleSpeed + i * 1.3;
+    const rx = 18 + 8 * Math.sin(phase * Math.PI * 2);
+
+    ctx.beginPath();
+    ctx.ellipse(bx, by, rx, 3, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 // ── Pulse animation loop ────────────────────────────────────────────
 
 function startPulse() {
@@ -292,12 +337,14 @@ canvas.height = CONFIG.canvas.height;
 // the browser CSS-scales the canvas down to fit the viewport.
 ctx.imageSmoothingEnabled = false;
 
-// Step 6 — load all sprites needed so far.
+// Step 8 — load all sprites for both scenes.
 loadImages({
   background1:  CONFIG.assets.background1,
+  outside:      CONFIG.assets.outside,
   catOpenEye:   CONFIG.assets.catOpenEye,
   catCloseEye:  CONFIG.assets.catCloseEye,
   catStand:     CONFIG.assets.catStand,
+  catFishing:   CONFIG.assets.catFishing,
   hat1:         CONFIG.assets.hat1,
   hat2:         CONFIG.assets.hat2,
   fish:         CONFIG.assets.fish,
@@ -373,7 +420,7 @@ loadImages({
       const cy = catPos.y + sc.h / 2;
       if (inRect(cx, cy, CONFIG.doorZone)) {
         doorTriggered = true;
-        console.log("door triggered");
+        onDoorTriggered();
       }
     }
   });
@@ -386,6 +433,20 @@ loadImages({
 // ── Render one frame ────────────────────────────────────────────────
 
 function drawScene(images) {
+  // ── Scene 2: outside fishing ──────────────────────────────────────
+  if (scene === "outside") {
+    ctx.drawImage(images.outside, 0, 0);
+
+    // Fishing cat on the bank
+    const fc = CONFIG.scene2.fishCat;
+    ctx.drawImage(images.catFishing, fc.x, fc.y, fc.w, fc.h);
+
+    // Animated water ripples
+    drawRipples(performance.now() / 1000);
+    return;
+  }
+
+  // ── Scene 1: bedroom ──────────────────────────────────────────────
   // 1. Background — native resolution, no scaling.
   ctx.drawImage(images.background1, 0, 0);
 
