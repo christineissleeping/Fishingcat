@@ -63,6 +63,14 @@ const CONFIG = {
     h: 270,
   },
 
+  // Step 7 — door trigger zone (cat centre must enter this rect)
+  doorZone: {
+    x: 2350,
+    y: 200,
+    w: 400,
+    h: 1200,
+  },
+
   // ── Timing (seconds) ──────────────────────────────────────────────
   timing: {
     blinkInterval:    3.0,
@@ -126,6 +134,7 @@ let cachedImages = null;   // set once at boot, used by callbacks
 let catPos = null;         // { x, y } — mutable position of standing cat
 let dragging = false;
 let dragOffset = { x: 0, y: 0 };
+let doorTriggered = false;
 
 // ── Blink state ─────────────────────────────────────────────────────
 
@@ -356,6 +365,17 @@ loadImages({
     catPos.x = pt.x - dragOffset.x;
     catPos.y = pt.y - dragOffset.y;
     drawScene(cachedImages);
+
+    // Step 7: check if cat centre entered the door zone
+    if (!doorTriggered) {
+      const sc = CONFIG.standCat;
+      const cx = catPos.x + sc.w / 2;
+      const cy = catPos.y + sc.h / 2;
+      if (inRect(cx, cy, CONFIG.doorZone)) {
+        doorTriggered = true;
+        console.log("door triggered");
+      }
+    }
   });
 
   canvas.addEventListener("mouseup", () => {
