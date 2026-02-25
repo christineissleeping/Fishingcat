@@ -73,7 +73,7 @@ const CONFIG = {
 
   // ── Timing (seconds) ──────────────────────────────────────────────
   timing: {
-    blinkInterval:    3.0,
+    blinkInterval:    2.0,
     blinkDuration:    0.15,
     hatDropSpeed:     600,   // px/s
     fishBobAmplitude: 10,    // px
