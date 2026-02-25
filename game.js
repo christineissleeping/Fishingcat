@@ -58,7 +58,7 @@ const CONFIG = {
   // dx/dy are offsets from the standing cat's top-left corner
   catHat: {
     dx: 145,
-    dy: -70,
+    dy: -80,
     w: 270,
     h: 270,
   },
