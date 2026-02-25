@@ -133,7 +133,7 @@ function loadImages(assetMap) {
 
 // ── Scene state ─────────────────────────────────────────────────────
 
-let scene = "idle";        // "idle" | "thinking" | "dreaming" | "standing" | "hatted" | "outside"
+let scene = "idle";        // "idle" | "thinking" | "dreaming" | "standing" | "hatted" | "doorway" | "outside"
 let visibleBubbles = 0;    // 0–3 small thought dots shown so far
 let pulseT0 = 0;           // timestamp when pulse started
 let animFrameId = null;    // rAF handle for the pulse loop
@@ -275,8 +275,13 @@ function onHatClick() {
 
 function onDoorTriggered() {
   dragging = false;
-  scene = "outside";
-  startPulse();              // reuse rAF loop for water ripple animation
+  scene = "doorway";         // intermediate state: Background-2 + outside scene
+  drawScene(cachedImages);
+  // Brief pause on Background-2, then transition to outside
+  setTimeout(() => {
+    scene = "outside";
+    startPulse();            // rAF loop for water ripple animation
+  }, 600);
 }
 
 // ── Water ripples (Step 8) ──────────────────────────────────────────
@@ -340,6 +345,7 @@ ctx.imageSmoothingEnabled = false;
 // Step 8 — load all sprites for both scenes.
 loadImages({
   background1:  CONFIG.assets.background1,
+  background2:  CONFIG.assets.background2,
   outside:      CONFIG.assets.outside,
   catOpenEye:   CONFIG.assets.catOpenEye,
   catCloseEye:  CONFIG.assets.catCloseEye,
@@ -433,6 +439,12 @@ loadImages({
 // ── Render one frame ────────────────────────────────────────────────
 
 function drawScene(images) {
+  // ── Doorway transition: Background-2 only ────────────────────────
+  if (scene === "doorway") {
+    ctx.drawImage(images.background2, 0, 0);
+    return;
+  }
+
   // ── Scene 2: outside fishing ──────────────────────────────────────
   if (scene === "outside") {
     ctx.drawImage(images.outside, 0, 0);
