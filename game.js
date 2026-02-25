@@ -100,7 +100,7 @@ const CONFIG = {
   // ── Step 8 — Scene 2: outside fishing ───────────────────────────
   scene2: {
     // Fishing cat on the bank near the wooden stump (native 2048×2048 → 1:1)
-    fishCat: { x: 1000, y: 1000, w: 500, h: 500 },
+    fishCat: { x: 1080, y: 1080, w: 500, h: 500 },
     // Water band where ripples are drawn
     water: { x: 450, y: 980, w: 2100, h: 300 },
     rippleCount: 6,
