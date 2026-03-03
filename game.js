@@ -71,6 +71,16 @@ const CONFIG = {
     h: 1200,
   },
 
+  // Door glow — subtle golden hint shown only in "hatted" state
+  doorGlow: {
+    cx: 2530,            // centre of the door
+    cy: 780,
+    r:  250,             // radius of the radial gradient
+    pulseSpeed: 0.6,     // cycles per second (slow)
+    minOpacity: 0.08,
+    maxOpacity: 0.22,
+  },
+
   // ── Timing (seconds) ──────────────────────────────────────────────
   timing: {
     blinkInterval:    2.0,
@@ -268,7 +278,7 @@ function onHatClick() {
   stopPulse();
   scene = "hatted";
   catPos = { x: CONFIG.standCat.x, y: CONFIG.standCat.y };
-  drawScene(cachedImages);
+  startPulse();              // rAF loop for door glow animation
 }
 
 function onDoorTriggered() {
@@ -308,6 +318,26 @@ function drawRipples(t) {
     ctx.ellipse(bx, by, rx, 3, 0, 0, Math.PI * 2);
     ctx.stroke();
   }
+  ctx.restore();
+}
+
+// ── Door glow (hatted state only) ───────────────────────────────────
+
+function drawDoorGlow(t) {
+  const g = CONFIG.doorGlow;
+  const phase = t * g.pulseSpeed * Math.PI * 2;
+  const alpha = g.minOpacity + (g.maxOpacity - g.minOpacity) *
+    (0.5 + 0.5 * Math.sin(phase));
+
+  const grad = ctx.createRadialGradient(g.cx, g.cy, 0, g.cx, g.cy, g.r);
+  grad.addColorStop(0, `rgba(255,215,80,${alpha})`);
+  grad.addColorStop(1, "rgba(255,215,80,0)");
+
+  ctx.save();
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(g.cx, g.cy, g.r, 0, Math.PI * 2);
+  ctx.fill();
   ctx.restore();
 }
 
@@ -489,6 +519,9 @@ function drawScene(images) {
     ctx.drawImage(images.catStand, sc.x, sc.y, sc.w, sc.h);
   }
   if (scene === "hatted" && catPos) {
+    // Subtle golden glow on the door
+    drawDoorGlow(performance.now() / 1000);
+
     const sc = CONFIG.standCat;
     ctx.drawImage(images.catStand, catPos.x, catPos.y, sc.w, sc.h);
 
