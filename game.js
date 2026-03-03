@@ -73,10 +73,10 @@ const CONFIG = {
 
   // Door frame glow — subtle golden outline shown only in "hatted" state
   doorFrame: {
-    x: 2375,
-    y: 195,
-    w: 275,
-    h: 1185,
+    x: 2335,
+    y: 175,
+    w: 355,
+    h: 1225,
     radius: 12,            // rounded corners
     pulseSpeed: 0.6,       // cycles per second (slow)
     minOpacity: 0.15,
