@@ -81,7 +81,7 @@ const CONFIG = {
     pulseSpeed: 0.6,       // cycles per second (slow)
     minOpacity: 0.15,
     maxOpacity: 0.45,
-    lineWidth: 4,
+    lineWidth: 8,
     blur: 18,              // shadowBlur feather
   },
 
