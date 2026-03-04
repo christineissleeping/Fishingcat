@@ -330,17 +330,36 @@ function drawRipples(t) {
 function drawDoorFrameGlow(t) {
   const f = CONFIG.doorFrame;
   const phase = t * f.pulseSpeed * Math.PI * 2;
-  const alpha = f.minOpacity + (f.maxOpacity - f.minOpacity) *
-    (0.5 + 0.5 * Math.sin(phase));
+  const pulse = 0.5 + 0.5 * Math.sin(phase);
+  const alpha = f.minOpacity + (f.maxOpacity - f.minOpacity) * pulse;
 
   ctx.save();
+
+  // Outer bloom passes – progressively larger blur, lower alpha
+  const glowLayers = [
+    { blur: 60, alpha: alpha * 0.15, width: 24 },
+    { blur: 40, alpha: alpha * 0.25, width: 18 },
+    { blur: 24, alpha: alpha * 0.4,  width: 12 },
+  ];
+  for (const g of glowLayers) {
+    ctx.shadowColor = `rgba(255,200,50,${g.alpha})`;
+    ctx.shadowBlur = g.blur;
+    ctx.strokeStyle = `rgba(255,215,80,${g.alpha})`;
+    ctx.lineWidth = g.width;
+    ctx.beginPath();
+    ctx.roundRect(f.x, f.y, f.w, f.h, f.radius);
+    ctx.stroke();
+  }
+
+  // Sharp main outline on top
+  ctx.shadowColor = `rgba(255,200,50,${alpha * 0.5})`;
+  ctx.shadowBlur = f.blur;
   ctx.strokeStyle = `rgba(255,215,80,${alpha})`;
   ctx.lineWidth = f.lineWidth;
-  ctx.shadowColor = `rgba(255,200,50,${alpha})`;
-  ctx.shadowBlur = f.blur;
   ctx.beginPath();
   ctx.roundRect(f.x, f.y, f.w, f.h, f.radius);
   ctx.stroke();
+
   ctx.restore();
 }
 
