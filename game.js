@@ -76,7 +76,7 @@ const CONFIG = {
     x: 2215,
     y: 175,
     w: 500,
-    h: 1175,
+    h: 940,
     radius: 12,            // rounded corners
     pulseSpeed: 0.6,       // cycles per second (slow)
     minOpacity: 0.15,
