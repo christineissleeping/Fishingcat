@@ -332,28 +332,77 @@ function drawDoorFrameGlow(t) {
   const phase = t * f.pulseSpeed * Math.PI * 2;
   const pulse = 0.5 + 0.5 * Math.sin(phase);
   const alpha = f.minOpacity + (f.maxOpacity - f.minOpacity) * pulse;
+  const spread = 60;  // how far the glow extends outward
 
   ctx.save();
 
-  // Outer bloom passes – progressively larger blur, lower alpha
-  const glowLayers = [
-    { blur: 60, alpha: alpha * 0.15, width: 24 },
-    { blur: 40, alpha: alpha * 0.25, width: 18 },
-    { blur: 24, alpha: alpha * 0.4,  width: 12 },
-  ];
-  for (const g of glowLayers) {
-    ctx.shadowColor = `rgba(255,200,50,${g.alpha})`;
-    ctx.shadowBlur = g.blur;
-    ctx.strokeStyle = `rgba(255,215,80,${g.alpha})`;
-    ctx.lineWidth = g.width;
-    ctx.beginPath();
-    ctx.roundRect(f.x, f.y, f.w, f.h, f.radius);
-    ctx.stroke();
+  // Helper: draw a soft glow band along each edge using linear gradients
+  // Each band is a rectangle that extends outward from the frame edge,
+  // filled with a gradient from gold→transparent
+  const goldR = 255, goldG = 210, goldB = 50;
+  const coreAlpha = alpha * 0.55;
+
+  function goldStop(a) {
+    return `rgba(${goldR},${goldG},${goldB},${a})`;
   }
 
-  // Sharp main outline on top
-  ctx.shadowColor = `rgba(255,200,50,${alpha * 0.5})`;
-  ctx.shadowBlur = f.blur;
+  const left   = f.x;
+  const top    = f.y;
+  const right  = f.x + f.w;
+  const bottom = f.y + f.h;
+
+  // Top edge glow (extends upward)
+  let grad = ctx.createLinearGradient(0, top, 0, top - spread);
+  grad.addColorStop(0, goldStop(coreAlpha));
+  grad.addColorStop(1, goldStop(0));
+  ctx.fillStyle = grad;
+  ctx.fillRect(left, top - spread, f.w, spread);
+
+  // Bottom edge glow (extends downward)
+  grad = ctx.createLinearGradient(0, bottom, 0, bottom + spread);
+  grad.addColorStop(0, goldStop(coreAlpha));
+  grad.addColorStop(1, goldStop(0));
+  ctx.fillStyle = grad;
+  ctx.fillRect(left, bottom, f.w, spread);
+
+  // Left edge glow (extends leftward)
+  grad = ctx.createLinearGradient(left, 0, left - spread, 0);
+  grad.addColorStop(0, goldStop(coreAlpha));
+  grad.addColorStop(1, goldStop(0));
+  ctx.fillStyle = grad;
+  ctx.fillRect(left - spread, top, spread, f.h);
+
+  // Right edge glow (extends rightward)
+  grad = ctx.createLinearGradient(right, 0, right + spread, 0);
+  grad.addColorStop(0, goldStop(coreAlpha));
+  grad.addColorStop(1, goldStop(0));
+  ctx.fillStyle = grad;
+  ctx.fillRect(right, top, spread, f.h);
+
+  // Corner glows – radial gradients so corners are round, not boxy
+  const corners = [
+    [left,  top],     // top-left
+    [right, top],     // top-right
+    [left,  bottom],  // bottom-left
+    [right, bottom],  // bottom-right
+  ];
+  for (const [cx, cy] of corners) {
+    const rg = ctx.createRadialGradient(cx, cy, 0, cx, cy, spread);
+    rg.addColorStop(0, goldStop(coreAlpha));
+    rg.addColorStop(1, goldStop(0));
+    ctx.fillStyle = rg;
+    ctx.fillRect(cx - spread, cy - spread, spread * 2, spread * 2);
+  }
+
+  // Inner fill – very faint gold wash inside the frame
+  ctx.fillStyle = goldStop(alpha * 0.08);
+  ctx.beginPath();
+  ctx.roundRect(f.x, f.y, f.w, f.h, f.radius);
+  ctx.fill();
+
+  // Crisp thin outline on top
+  ctx.shadowColor = `rgba(255,200,50,${alpha * 0.3})`;
+  ctx.shadowBlur = 8;
   ctx.strokeStyle = `rgba(255,215,80,${alpha})`;
   ctx.lineWidth = f.lineWidth;
   ctx.beginPath();
