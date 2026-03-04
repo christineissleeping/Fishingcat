@@ -79,8 +79,8 @@ const CONFIG = {
     h: 910,
     radius: 12,            // rounded corners
     pulseSpeed: 0.6,       // cycles per second (slow)
-    minOpacity: 0.15,
-    maxOpacity: 0.45,
+    minOpacity: 0.25,
+    maxOpacity: 0.6,
     lineWidth: 8,
     blur: 18,              // shadowBlur feather
   },
@@ -339,8 +339,8 @@ function drawDoorFrameGlow(t) {
   // Helper: draw a soft glow band along each edge using linear gradients
   // Each band is a rectangle that extends outward from the frame edge,
   // filled with a gradient from gold→transparent
-  const goldR = 255, goldG = 210, goldB = 50;
-  const coreAlpha = alpha * 0.55;
+  const goldR = 255, goldG = 195, goldB = 30;
+  const coreAlpha = alpha * 0.65;
 
   function goldStop(a) {
     return `rgba(${goldR},${goldG},${goldB},${a})`;
@@ -395,15 +395,15 @@ function drawDoorFrameGlow(t) {
   }
 
   // Inner fill – very faint gold wash inside the frame
-  ctx.fillStyle = goldStop(alpha * 0.08);
+  ctx.fillStyle = goldStop(alpha * 0.12);
   ctx.beginPath();
   ctx.roundRect(f.x, f.y, f.w, f.h, f.radius);
   ctx.fill();
 
   // Crisp thin outline on top
-  ctx.shadowColor = `rgba(255,200,50,${alpha * 0.3})`;
-  ctx.shadowBlur = 8;
-  ctx.strokeStyle = `rgba(255,215,80,${alpha})`;
+  ctx.shadowColor = `rgba(255,185,30,${alpha * 0.4})`;
+  ctx.shadowBlur = 10;
+  ctx.strokeStyle = `rgba(255,195,50,${alpha})`;
   ctx.lineWidth = f.lineWidth;
   ctx.beginPath();
   ctx.roundRect(f.x, f.y, f.w, f.h, f.radius);
